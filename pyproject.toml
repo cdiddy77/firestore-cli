@@ -1,0 +1,45 @@
+[tool.poetry]
+name = "firestore_cli"
+version = "0.1.2"
+description = "Command-line tool for querying/updating firestore"
+authors = ["Charles Parker <charles@parkerfolk.net>"]
+license = "MIT"
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.10"
+firebase-admin = "^6.6.0"
+click = "^8.1.7"
+
+[tool.poetry.group.dev.dependencies]
+build = "^1.2.2.post1"
+twine = "^6.0.1"
+
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "firestore-cli"
+version = "0.1.2"
+authors = [
+    { name = "Charles Parker", email = "charles@parkerfolk.net" }
+]
+description = "Command-line tool for querying/updating firestore"
+readme = "README.md"
+dependencies = [
+    "firebase-admin", "click"
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent"
+]
+requires-python = ">=3.10"
+
+[project.scripts]
+fsquery = "firestore_cli.fsquery:main"
+fsupdate = "firestore_cli.fsupdate:main"
+
+[project.urls]
+"Homepage" = "https://github.com/cdiddy77/firestore-cli"
+

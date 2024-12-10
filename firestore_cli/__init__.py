@@ -1,0 +1,3 @@
+"""
+Firestore CLI package
+"""
