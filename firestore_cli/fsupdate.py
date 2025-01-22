@@ -51,7 +51,7 @@ def execute_update(db: firestore.firestore.Client, args):
 @click.option("--update", help="Update a document")
 @click.option("--delete", help="Delete a document")
 @click.option("--doc", help="Path to document")
-def main(path, set, add, update, delete, doc):
+def main(credentials, path, set, add, update, delete, doc):
     args = {
         "path": path,
         "set": set,
@@ -60,7 +60,7 @@ def main(path, set, add, update, delete, doc):
         "delete": delete,
         "doc": doc,
     }
-    db = initialize_firestore()
+    db = initialize_firestore(credentials)
     results = execute_update(db, args)
     print(results)
 
