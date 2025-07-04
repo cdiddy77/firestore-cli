@@ -5,6 +5,9 @@ import firebase_admin
 from firebase_admin import credentials
 from firebase_admin import firestore
 from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore_v1 import _helpers
+from google.cloud.firestore_v1.document import DocumentReference
+from google.cloud.firestore_v1.base_document import DocumentSnapshot
 import click
 
 
@@ -19,6 +22,52 @@ def initialize_firestore(
     )
     firebase_admin.initialize_app(cred)
     return firestore.client()
+
+class OptionalFirestoreEncoder(json.JSONEncoder):
+    """ Invoked by json.dump() or json.dumps() to decode and dereference Firestore objects.
+        Handles special data types that can't be directly encoded in JSON.
+
+        Currently handles the following types:
+        - DocumentReference:
+            - is_recursive=False: Return a string with path to the reference
+            - is_recursive=True:  Fetch the referenced document if possible. Return the
+              dictionary version of the object. Some of the members of the dictionary will
+              be DocumentSnapshot objects, which we handle.
+        - DocumentSnapshot: Return the ToDictionary() version of it
+        - DatetimeWithNanoseconds: Return a string with the RFC 3339 version of the time
+            e.g.: "2025-03-31T00:00:00.000000Z"
+    """
+    recursive = False
+
+    def default(self, obj):
+        if isinstance(obj, DocumentSnapshot):
+            """
+                If the object is a document snapshot, return its dictionary form
+            """
+            retval = obj.to_dict()
+            return retval
+
+        if isinstance(obj, DocumentReference):
+            """
+                If the object is a document reference, we either turn the reference
+                path into a string (is_recusive=False) or we fetch the referenced
+                document and add it as a dictionary element of the current document.
+            """
+            if OptionalFirestoreEncoder.recursive:
+                doc = obj.get()
+                if doc.exists:
+                    return doc.to_dict()
+                else:
+                    return f"ERROR: ref to {obj.path} but fetching that document failed"
+            else:
+                return f"ref: {obj.path}"
+        if isinstance(obj, _helpers.DatetimeWithNanoseconds):
+            """
+                Firebase sometimes uses this weird datetime that has nanoseconds, not milliseconds.
+                It can't be serialised by the default encoder. Turn it into an rfc3339() datetime
+            """
+            return obj.rfc3339()
+        return super().default(obj)
 
 
 # Parse command line arguments
@@ -48,11 +97,15 @@ def initialize_firestore(
     required=False,
     help="Field to order by, followed by ASCENDING or DESCENDING",
 )
+@click.option("--recursive", type=bool, is_flag=True, required=False,
+              help="Follow references to return the document they reference"
+)
 @click.option("--limit", type=int, help="Limit the number of results")
-def main(credentials, path, group, where, id, orderby, limit):
+def main(credentials, path, group, where, id, orderby, limit, recursive):
     db = initialize_firestore(credentials)
     results = execute_query(db, path, group, id, where, orderby, limit)
-    print(json.dumps(results, indent=2))
+    OptionalFirestoreEncoder.recursive = recursive
+    print(json.dumps(results, indent=2, ensure_ascii=False, cls=OptionalFirestoreEncoder))
 
 
 def convert_string(input_str):
@@ -86,6 +139,7 @@ def execute_query(
         collection = db.collection(collection_path)
     query_result = collection
     if id is not None:
+        # Simple query for document by id
         query_result = query_result.document(id)  # type: ignore
         doc = query_result.get()
         return doc.to_dict() if doc.exists else None
