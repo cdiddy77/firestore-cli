@@ -71,14 +71,14 @@ class OptionalFirestoreEncoder(json.JSONEncoder):
 
 
 # Parse command line arguments
-@click.command()
+@click.command(context_settings={"show_default": True}, no_args_is_help=True)
+@click.option("--path", required=True, help="Path to Firestore collection")
 @click.option(
     "--credentials",
-    required=False,
+    required=False, show_default=True,
     help="Path to Firebase credentials JSON",
     default=os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 )
-@click.option("--path", required=True, help="Path to Firestore collection")
 @click.option("--group", is_flag=True, help="whether this is a group query")
 @click.option(
     "--where",
@@ -97,19 +97,39 @@ class OptionalFirestoreEncoder(json.JSONEncoder):
     required=False,
     help="Field to order by, followed by ASCENDING or DESCENDING",
 )
-@click.option("--recursive", type=bool, is_flag=True, required=False,
+@click.option(
+    "--out", required=False,
+    help="Name of a file to write to, instead of stdout",
+)
+@click.option("--recursive", default=False, show_default="False",
+              type=bool, is_flag=True, required=False,
               help="Follow references to return the document they reference"
 )
 @click.option("--limit", type=int, help="Limit the number of results")
-def main(credentials, path, group, where, id, orderby, limit, recursive):
+def main(credentials, path, group, where, id, orderby, limit, recursive, out):
+    """ fsquery - Query firestore collections interactively from the command line.
+
+        Automatically converts times to RFC 3339 format, and optionally dereferences
+        any referenced documents to return a complete document.
+    """
     db = initialize_firestore(credentials)
     results = execute_query(db, path, group, id, where, orderby, limit)
     OptionalFirestoreEncoder.recursive = recursive
-    print(json.dumps(results, indent=2, ensure_ascii=False, cls=OptionalFirestoreEncoder))
+    output = json.dumps(results, indent=2, ensure_ascii=False, cls=OptionalFirestoreEncoder)
+    if out:
+        try:
+            with open(out, "w") as f:
+                f.write(output)
+        except Exception as e:
+            print(e)
+    else:
+        print(output)
 
 
-def convert_string(input_str):
-    # Check if the string starts with 'int:', 'bool:', or 'float:' and convert accordingly
+def convert_string(input_str) -> int|str|float:
+    """
+        Check if the string starts with 'int:', 'bool:', or 'float:' and convert accordingly
+    """
     if input_str.startswith("int:"):
         return int(input_str[4:])
     elif input_str.startswith("bool:"):
