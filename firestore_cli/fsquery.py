@@ -29,11 +29,11 @@ class FirestoreEncoder(json.JSONEncoder):
         Handles special data types that can't be directly encoded in JSON.
 
         Currently handles the following types:
-        - DocumentReference: Call level_count() with the current value of recursion (default: 0)
-            - False: We are at the limits of allowed recursion: Return a string with path to the reference
-            - True:  We are not yet at the limits of allowed recursion: Fetch the referenced document if
+        - DocumentReference: Check the current value of recursion (default: 0)
+            - <= 0: We are at the limits of allowed recursion: Return a string with path to the reference
+            - > 0:  We are not yet at the limits of allowed recursion: Fetch the referenced document if
               possible. Return the dictionary version of the object. Some of the members of the dictionary
-              will be DocumentSnapshot objects, which we handle.
+              will be DocumentSnapshot objects, which we also handle.
         - DocumentSnapshot: Return the ToDictionary() version of it
         - DatetimeWithNanoseconds: Return a string with the RFC 3339 version of the time
             e.g.: "2025-03-31T00:00:00.000000Z"
