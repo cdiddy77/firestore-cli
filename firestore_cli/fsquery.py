@@ -114,11 +114,9 @@ class FirestoreEncoder(json.JSONEncoder):
 )
 @click.option("--recursion", default=0, show_default=True,
               type=int, required=False,
-              help="Follow references to a depth of X, including the document they \
-                reference in the output. Default is depth 0, which means do not \
-                follow references."
+              help="Follow references to a depth of X, including the document they reference in the output. Depth 0 means do not follow any references."
 )
-@click.option("--limit", type=int, help="Limit the number of results")
+@click.option("--limit", type=int, help="Return no more than X results")
 def main(credentials, path, group, where, id, orderby, limit, recursion, out):
     """ fsquery - Query firestore collections interactively from the command line.
 
