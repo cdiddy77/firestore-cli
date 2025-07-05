@@ -23,21 +23,22 @@ def initialize_firestore(
     firebase_admin.initialize_app(cred)
     return firestore.client()
 
-class OptionalFirestoreEncoder(json.JSONEncoder):
+
+class FirestoreEncoder(json.JSONEncoder):
     """ Invoked by json.dump() or json.dumps() to decode and dereference Firestore objects.
         Handles special data types that can't be directly encoded in JSON.
 
         Currently handles the following types:
-        - DocumentReference:
-            - is_recursive=False: Return a string with path to the reference
-            - is_recursive=True:  Fetch the referenced document if possible. Return the
-              dictionary version of the object. Some of the members of the dictionary will
-              be DocumentSnapshot objects, which we handle.
+        - DocumentReference: Call level_count() with the current value of recursion (default: 0)
+            - False: We are at the limits of allowed recursion: Return a string with path to the reference
+            - True:  We are not yet at the limits of allowed recursion: Fetch the referenced document if
+              possible. Return the dictionary version of the object. Some of the members of the dictionary
+              will be DocumentSnapshot objects, which we handle.
         - DocumentSnapshot: Return the ToDictionary() version of it
         - DatetimeWithNanoseconds: Return a string with the RFC 3339 version of the time
             e.g.: "2025-03-31T00:00:00.000000Z"
     """
-    recursive = False
+    recursion = 0
 
     def default(self, obj):
         if isinstance(obj, DocumentSnapshot):
@@ -52,13 +53,23 @@ class OptionalFirestoreEncoder(json.JSONEncoder):
                 If the object is a document reference, we either turn the reference
                 path into a string (is_recusive=False) or we fetch the referenced
                 document and add it as a dictionary element of the current document.
+
+                There's a bit of janky loop-breaking here. It's possible to have circular
+                references: doca.owner = ref: users/person1 and then person1.defaultdoc = ref: docs/doca
+
+                This attempts to prevent dereferencing them infinitely. But it doesn't quite work right.
             """
-            if OptionalFirestoreEncoder.recursive:
-                doc = obj.get()
-                if doc.exists:
-                    return doc.to_dict()
+            if FirestoreEncoder.recursion:
+                if self.recursion > 0:
+                    self.recursion -= 1
+                    doc = obj.get()
+                    if doc.exists:
+                        return doc.to_dict()
+                    else:
+                        return f"ERROR: ref to {obj.path} but fetching that document failed"
                 else:
-                    return f"ERROR: ref to {obj.path} but fetching that document failed"
+                    # We have already dereferenced as much as we should. Return a simple string.
+                    return f"xref: {obj.path}"
             else:
                 return f"ref: {obj.path}"
         if isinstance(obj, _helpers.DatetimeWithNanoseconds):
@@ -101,12 +112,14 @@ class OptionalFirestoreEncoder(json.JSONEncoder):
     "--out", required=False,
     help="Name of a file to write to, instead of stdout",
 )
-@click.option("--recursive", default=False, show_default="False",
-              type=bool, is_flag=True, required=False,
-              help="Follow references to return the document they reference"
+@click.option("--recursion", default=0, show_default=True,
+              type=int, required=False,
+              help="Follow references to a depth of X, including the document they \
+                reference in the output. Default is depth 0, which means do not \
+                follow references."
 )
 @click.option("--limit", type=int, help="Limit the number of results")
-def main(credentials, path, group, where, id, orderby, limit, recursive, out):
+def main(credentials, path, group, where, id, orderby, limit, recursion, out):
     """ fsquery - Query firestore collections interactively from the command line.
 
         Automatically converts times to RFC 3339 format, and optionally dereferences
@@ -114,8 +127,8 @@ def main(credentials, path, group, where, id, orderby, limit, recursive, out):
     """
     db = initialize_firestore(credentials)
     results = execute_query(db, path, group, id, where, orderby, limit)
-    OptionalFirestoreEncoder.recursive = recursive
-    output = json.dumps(results, indent=2, ensure_ascii=False, cls=OptionalFirestoreEncoder)
+    FirestoreEncoder.recursion = recursion
+    output = json.dumps(results, indent=2, ensure_ascii=False, cls=FirestoreEncoder)
     if out:
         try:
             with open(out, "w") as f:
