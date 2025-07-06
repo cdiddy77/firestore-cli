@@ -35,18 +35,28 @@ To specify the credentials necessary to access Firestore, you can use either of 
 
 If neither method is provided, the script will attempt to use the default application credentials (which probably won't go well)
 
+### Emulators
+
+If you're using the [local firestore emulators](https://firebase.google.com/docs/emulator-suite/connect_firestore) you'll want to set an environment variable to influence the Firestore SDK. Use whatever port you're running your firestore emulators on. In this example, that port is `8080`.
+
+```shell
+export FIRESTORE_EMULATOR_HOST="127.0.0.1:8080"
+```
+
 ### fsquery
 
 The `fsquery` script allows you to query documents from a Firestore collection.
 
 #### Command Line Options
 
-- `--path`: Path to the Firestore collection (required).
+- `--path collection`: Path to the Firestore collection (required).
 - `--group`: Specify if this is a collection group query (optional).
 - `--where`: Apply multiple filters to the query in the format `field:operation:value` e.g. `--where "some_field == some_value"` (optional). It is recommended to place quotes around the expression.
 - `--id`: Query for a specific document ID (optional).
 - `--orderby`: Order the results by specified fields, followed by `ASCENDING` or `DESCENDING` (optional).
-- `--limit`: Limit the number of results (optional).
+- `--limit n`: Return *n* or fewer results (optional).
+- `--recursion n`: Follow references and fetch the referenced documents up to level *n*, incorporating them into the document that is returned. (optional, default: 0, which does not follow any references.)
+- `--out filename`: Write the json output to a file named *filename*
 
 #### Examples
 
@@ -60,6 +70,12 @@ The `fsquery` script allows you to query documents from a Firestore collection.
 
    ```sh
    fsquery --path your-collection --where "field_name == value"
+   ```
+
+3. **Write output to a file**
+
+   ```sh
+   fsquery --path your-collection --out query.json
    ```
 
 ### fsupdate
