@@ -50,6 +50,8 @@ The `fsquery` script allows you to query documents from a Firestore collection.
 #### Command Line Options
 
 - `--path collection`: Path to the Firestore collection (required).
+- `--credentials`: Path to Firebase credentials JSON file (optional).
+- `--database`: Firestore database name (optional, defaults to '(default)').
 - `--group`: Specify if this is a collection group query (optional).
 - `--where`: Apply multiple filters to the query in the format `field:operation:value` e.g. `--where "some_field == some_value"` (optional). It is recommended to place quotes around the expression.
 - `--id`: Query for a specific document ID (optional).
@@ -78,6 +80,12 @@ The `fsquery` script allows you to query documents from a Firestore collection.
    fsquery --path your-collection --out query.json
    ```
 
+4. **Query documents from a named database**:
+
+   ```sh
+   fsquery --path your-collection --database my-database-name
+   ```
+
 ### fsupdate
 
 The `fsupdate` script allows you to set, add, update, or delete documents in a Firestore collection.
@@ -85,6 +93,8 @@ The `fsupdate` script allows you to set, add, update, or delete documents in a F
 #### Command Line Options
 
 - `--path`: Path to the Firestore collection (required).
+- `--credentials`: Path to Firebase credentials JSON file (optional).
+- `--database`: Firestore database name (optional, defaults to '(default)').
 - `--set`: Set a document with the specified ID.
 - `--add`: Add a new document.
 - `--update`: Update a document with the specified ID.
@@ -114,6 +124,11 @@ The `fsupdate` script allows you to set, add, update, or delete documents in a F
 4. **Delete a document**:
    ```sh
    fsupdate --path your-collection --delete your-document-id
+   ```
+
+5. **Set a document in a named database**:
+   ```sh
+   fsupdate --path your-collection --database my-database-name --set your-document-id --doc path/to/your/document.json
    ```
 
 ## License

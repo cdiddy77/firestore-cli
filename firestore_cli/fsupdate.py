@@ -15,7 +15,7 @@ def initialize_firestore(certificate_path: str | None = None, database: str | No
         else credentials.ApplicationDefault()
     )
     firebase_admin.initialize_app(cred)
-    return firestore.client(database=database) if database else firestore.client()
+    return firestore.client(database=database)
 
 
 def read_json_file(file_path):

@@ -22,7 +22,7 @@ def initialize_firestore(
         else credentials.ApplicationDefault()
     )
     firebase_admin.initialize_app(cred)
-    return firestore.client(database=database) if database else firestore.client()
+    return firestore.client(database=database)
 
 
 class FirestoreEncoder(json.JSONEncoder):
