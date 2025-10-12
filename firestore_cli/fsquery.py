@@ -14,6 +14,7 @@ import click
 # Initialize Firebase Admin
 def initialize_firestore(
     certificate_path: str | None = None,
+    database: str | None = None,
 ) -> firestore.firestore.Client:
     cred = (
         credentials.Certificate(certificate_path)
@@ -21,7 +22,7 @@ def initialize_firestore(
         else credentials.ApplicationDefault()
     )
     firebase_admin.initialize_app(cred)
-    return firestore.client()
+    return firestore.client(database=database) if database else firestore.client()
 
 
 class FirestoreEncoder(json.JSONEncoder):
@@ -90,6 +91,11 @@ class FirestoreEncoder(json.JSONEncoder):
     help="Path to Firebase credentials JSON",
     default=os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 )
+@click.option(
+    "--database",
+    required=False,
+    help="Firestore database name (defaults to '(default)')",
+)
 @click.option("--group", is_flag=True, help="whether this is a group query")
 @click.option(
     "--where",
@@ -117,13 +123,13 @@ class FirestoreEncoder(json.JSONEncoder):
               help="Follow references to a depth of X, including the document they reference in the output. Depth 0 means do not follow any references."
 )
 @click.option("--limit", type=int, help="Return no more than X results")
-def main(credentials, path, group, where, id, orderby, limit, recursion, out):
+def main(credentials, database, path, group, where, id, orderby, limit, recursion, out):
     """ fsquery - Query firestore collections interactively from the command line.
 
         Automatically converts times to RFC 3339 format, and optionally dereferences
         any referenced documents to return a complete document.
     """
-    db = initialize_firestore(credentials)
+    db = initialize_firestore(credentials, database)
     results = execute_query(db, path, group, id, where, orderby, limit)
     FirestoreEncoder.recursion = recursion
     output = json.dumps(results, indent=2, ensure_ascii=False, cls=FirestoreEncoder)
