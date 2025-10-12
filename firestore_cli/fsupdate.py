@@ -8,14 +8,14 @@ from google.cloud.firestore_v1.base_query import FieldFilter
 
 
 # Initialize Firebase Admin
-def initialize_firestore(certificate_path: str | None = None):
+def initialize_firestore(certificate_path: str | None = None, database: str | None = None):
     cred = (
         credentials.Certificate(certificate_path)
         if certificate_path
         else credentials.ApplicationDefault()
     )
     firebase_admin.initialize_app(cred)
-    return firestore.client()
+    return firestore.client(database=database)
 
 
 def read_json_file(file_path):
@@ -45,13 +45,18 @@ def execute_update(db: firestore.firestore.Client, args):
     help="Path to Firebase credentials JSON",
     default=os.getenv("GOOGLE_APPLICATION_CREDENTIALS"),
 )
+@click.option(
+    "--database",
+    required=False,
+    help="Firestore database name (defaults to '(default)')",
+)
 @click.option("--path", required=True, help="Path to Firestore collection")
 @click.option("--set", help="Set a document")
 @click.option("--add", is_flag=True, help="Add a document")
 @click.option("--update", help="Update a document")
 @click.option("--delete", help="Delete a document")
 @click.option("--doc", help="Path to document")
-def main(credentials, path, set, add, update, delete, doc):
+def main(credentials, database, path, set, add, update, delete, doc):
     args = {
         "path": path,
         "set": set,
@@ -60,7 +65,7 @@ def main(credentials, path, set, add, update, delete, doc):
         "delete": delete,
         "doc": doc,
     }
-    db = initialize_firestore(credentials)
+    db = initialize_firestore(credentials, database)
     results = execute_update(db, args)
     print(results)
 
